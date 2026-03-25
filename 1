@@ -1,0 +1,62 @@
+import re
+import pdfplumber
+
+def is_barcode(text):
+    return re.fullmatch(r"\d{13}", text) is not None
+
+def extract_numbers(text):
+    return [float(x.replace(",", ".")) for x in re.findall(r"\d+[.,]?\d*", text)]
+
+def classify_numbers(nums):
+    qty = None
+    unit_price = None
+    gross = None
+
+    for n in nums:
+        if n <= 1000:
+            qty = n
+        elif 1000 < n <= 20000:
+            if unit_price is None:
+                unit_price = n
+            else:
+                gross = n
+        else:
+            gross = n
+
+    return qty, unit_price, gross
+
+def convert_pdf_to_items(pdf_path):
+    items = []
+
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            text = page.extract_text()
+
+            if not text:
+                continue
+
+            lines = text.split("\n")
+
+            for i, line in enumerate(lines):
+                words = line.split()
+
+                for word in words:
+                    if is_barcode(word):
+                        barcode = word
+                        block = " ".join(lines[max(0, i-2): i+3])
+
+                        nums = extract_numbers(block)
+                        qty, unit_price, gross = classify_numbers(nums)
+
+                        vat = 27
+
+                        if qty and unit_price:
+                            items.append({
+                                "barcode": barcode,
+                                "qty": qty,
+                                "unit_price": unit_price,
+                                "gross": gross,
+                                "vat": vat
+                            })
+
+    return items
