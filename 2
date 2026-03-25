@@ -1,0 +1,27 @@
+from converter import convert_pdf_to_items
+import xml.etree.ElementTree as ET
+
+def generate_xml(items, output_file):
+    root = ET.Element("Lines")
+
+    for item in items:
+        line = ET.SubElement(root, "Line")
+
+        ET.SubElement(line, "Barcode").text = item["barcode"]
+        ET.SubElement(line, "Qty").text = str(item["qty"])
+        ET.SubElement(line, "NetPrice").text = str(item["unit_price"])
+        ET.SubElement(line, "VatPercent").text = str(item["vat"])
+        ET.SubElement(line, "LineAmount").text = str(item["gross"])
+
+    tree = ET.ElementTree(root)
+    tree.write(output_file, encoding="utf-8", xml_declaration=True)
+
+if __name__ == "__main__":
+    pdf_path = input("PDF fájl útvonala: ")
+    output = "output.xml"
+
+    items = convert_pdf_to_items(pdf_path)
+
+    generate_xml(items, output)
+
+    print("Kész:", output)
